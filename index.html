@@ -22,6 +22,7 @@
     --ink-mute: rgba(247,243,234,0.45);
   }
   * { -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; background: var(--forest-deep); }
   body {
     font-family: 'Inter', sans-serif;
     color: var(--ink);
@@ -29,8 +30,17 @@
       radial-gradient(120% 80% at 50% -10%, #103a26 0%, var(--forest-deep) 55%),
       var(--forest-deep);
     background-attachment: fixed;
+    display: block;
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
   }
   .display { font-family: 'Cormorant Garamond', serif; }
+  
+  /* Main container — ensure visibility on all browsers, especially Safari */
+  .max-w-2xl { display: block; max-width: 42rem; margin-left: auto; margin-right: auto; width: 100%; }
+  
   .gold-text {
     background: linear-gradient(100deg, var(--gold-1), var(--gold-3) 45%, var(--gold-2));
     -webkit-background-clip: text; background-clip: text;
@@ -1144,19 +1154,38 @@ function loadCalendly(){
   document.body.appendChild(script);
 }
 
-/* On load: if a completed assessment is saved on this device, restore it so the
-   person sees their report again without redoing the test. */
 function restoreSavedResult(){
-  let saved;
-  try { saved = JSON.parse(localStorage.getItem("godhealth_genesis_v1")); }
-  catch(e){ return; }
-  if(!saved || !saved.answers || !saved.answers.q10) return;
-  // rebuild state and re-render the report (skip the webhook dispatch)
-  state.lead = saved.lead || {};
-  state.answers = saved.answers;
-  state.current = QUESTIONS.length;
-  document.querySelectorAll(".screen").forEach(sc=> sc.classList.remove("active"));
-  finishAssessment(true);
+  try {
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem("godhealth_genesis_v1")); }
+    catch(e){ return; }
+    if(!saved || !saved.answers || !saved.answers.q10) return;
+    // rebuild state and re-render the report (skip the webhook dispatch)
+    state.lead = saved.lead || {};
+    state.answers = saved.answers;
+    state.current = QUESTIONS.length;
+    document.querySelectorAll(".screen").forEach(sc=> sc.classList.remove("active"));
+    finishAssessment(true);
+  } catch(e) {
+    // silently fail and keep the registration screen visible
+    console.error("restoreSavedResult failed:", e);
+  }
+}
+
+try {
+  restoreSavedResult();
+} catch(e) {
+  console.error("Initialization error:", e);
+}
+
+// Safeguard: ensure the registration screen is visible if nothing was restored
+try {
+  const reg = document.getElementById("screen-reg");
+  if(reg && !document.querySelector(".screen.active")) {
+    reg.classList.add("active");
+  }
+} catch(e) {
+  console.error("Safeguard error:", e);
 }
 
 function clearSavedResult(){
@@ -1164,7 +1193,6 @@ function clearSavedResult(){
   location.reload();
 }
 
-restoreSavedResult();
 
 </script>
 </body>
